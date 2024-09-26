@@ -1,16 +1,21 @@
-"""
-包含用來顯示及編輯圖片的視窗
-功能：
-- 顯示／Zoom In／Zoom Out
-- 點擊畫面以新增mask的邊界點
-"""
 import tkinter as tk
 from tkinter import ttk
 import cv2
+import numpy as np
 import PIL.Image
 import PIL.ImageTk
 
 class ImageEditWindow(ttk.Label):
+    """
+    用來顯示及編輯圖片的視窗
+
+    功能：
+    - 顯示
+    - Zoom In／Zoom Out（滑鼠滾輪）
+    - 拖動顯示範圍（按住滑鼠中鍵）
+    - 點擊畫面以新增mask的邊界點（滑鼠左鍵）
+    """
+    
     def __init__(self, master: tk.Misc, file_path: str):
         """
         初始化一個畫面編輯視窗
@@ -22,7 +27,9 @@ class ImageEditWindow(ttk.Label):
         ttk.Label.__init__(self, master, text="", anchor=tk.NW)
 
         # 原圖片
-        self.ORIGINAL_IMG = cv2.imread(file_path)
+        # 解決「當路徑中有Unicode字元時」造成cv2.imread失敗的問題
+        # https://jdhao.github.io/2019/09/11/opencv_unicode_image_path/#google_vignette
+        self.ORIGINAL_IMG = cv2.imdecode(np.fromfile(file_path), cv2.IMREAD_COLOR)
         # 圖片路徑
         self.FILE_PATH = file_path
 
