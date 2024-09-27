@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+import sys
 import cv2
 import numpy as np
 import PIL.Image
@@ -18,6 +20,7 @@ class ImageEditWindow(ttk.Label):
     MOUSE_SENSITIVITY: float  = 1 # 滑鼠平移的靈敏度
     ORIGINAL_IMG: cv2.Mat   # 原始圖片
     FILE_PATH: str          # 圖檔路徑
+    WINDOW_MESSAGE: tk.StringVar # 欲顯示的資訊（含鼠標位置、viewport）
     __viewport__: list[int] # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
     __ratio__: int          # 縮放比例，1->最小，100->最大
     __drag_start__: list[int] # 開始拖移的位置，相對於widget左上角的（x, y）座標
@@ -37,9 +40,15 @@ class ImageEditWindow(ttk.Label):
         # 原圖片
         # 解決「當路徑中有Unicode字元時」造成cv2.imread失敗的問題
         # https://jdhao.github.io/2019/09/11/opencv_unicode_image_path/#google_vignette
-        self.ORIGINAL_IMG = cv2.imdecode(np.fromfile(file_path), cv2.IMREAD_COLOR)
+        try:
+            self.ORIGINAL_IMG = cv2.imdecode(np.fromfile(file_path), cv2.IMREAD_COLOR)
+        except FileNotFoundError:
+            messagebox.showerror("Error", f"無法開啟圖片 \"{file_path}\"")
+            sys.exit(-1)
         # 圖片路徑
         self.FILE_PATH = file_path
+        # 顯示資訊
+        self.WINDOW_MESSAGE = tk.StringVar(value=f'載入 {file_path} 成功')
         # 顯示的圖片範圍
         self.__viewport__ = [0, 0, self.ORIGINAL_IMG.shape[1], self.ORIGINAL_IMG.shape[0]]
         # 縮放比例
@@ -50,6 +59,7 @@ class ImageEditWindow(ttk.Label):
         self.bind("<B3-Motion>", self.pan)    # 按住滑鼠右鍵時可以平移viewport
         self.bind("<MouseWheel>", self.zoom)  # zoom in / zoom out
         self.bind("<Configure>", self.update) # 調整大小
+        self.bind("<Motion>", self.update_message) # 每當滑鼠移動，更新位置資訊
 
 
     def set_drag_start(self, event : tk.Event):
@@ -138,6 +148,17 @@ class ImageEditWindow(ttk.Label):
         # 設置圖片
         self["image"] = img
         self.__SHOWED_IMG__ = img # 增加reference，以免img被回收
+
+    
+    def update_message(self, event : tk.Event):
+        """
+        移據滑鼠現在的位置更新顯示的資訊
+
+        Args:
+            event: 用來取得滑鼠的位置
+        """
+        pixelX, pixelY = self.__to_original_pixel__(event.x, event.y)
+        self.WINDOW_MESSAGE.set(f"x: {pixelX}, y: {pixelY}, viewport: {self.__viewport__}")
 
     
     def __to_original_pixel__(self, x : int, y : int) -> tuple[int, int]:

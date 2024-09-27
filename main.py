@@ -25,6 +25,8 @@ class MainFrame(ttk.Frame):
             , filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir="./workspace/")
         )
         self.__img_edit__.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        # 狀態欄
+        ttk.Label(self, textvariable=self.__img_edit__.WINDOW_MESSAGE).grid(row=1, column=0, sticky=tk.NW)
 
         # 載入設定檔
         self.__read_setting__()
