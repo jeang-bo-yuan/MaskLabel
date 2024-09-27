@@ -8,7 +8,7 @@ def main():
     root.columnconfigure(0, weight=1)
 
     img_edit = ImageEditWindow(root
-                               , filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png"])])
+                               , filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])])
                                )
     img_edit.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.W, tk.E))
 
