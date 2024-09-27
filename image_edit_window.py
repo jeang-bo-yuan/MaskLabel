@@ -173,4 +173,5 @@ class ImageEditWindow(ttk.Label):
         y = np.clip(y, 0, self.ORIGINAL_IMG.shape[0] - dy)
 
         self.__viewport__[0:2] = [x, y]
-    
+
+    pass # end of ImageEditWindow
