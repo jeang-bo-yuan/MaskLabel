@@ -14,11 +14,11 @@ class ImageEditWindow(ttk.Label):
     - Zoom In／Zoom Out（滑鼠滾輪）
     - 拖動顯示範圍（按住滑鼠右鍵）
     """
-    WHEEL_SENSITIVITY: float  = 0.05 # 滑鼠滾輪的靈敏度
+    WHEEL_SENSITIVITY: float  = -0.05 # 滑鼠滾輪的靈敏度
     MOUSE_SENSITIVITY: float  = 1 # 滑鼠平移的靈敏度
     ORIGINAL_IMG: cv2.Mat   # 原始圖片
     FILE_PATH: str          # 圖檔路徑
-    __viewport__: list[int] # 顯示範圍，[r, c, dr, dc]，分別代表 [起始列, 起始欄, 幾列, 幾欄]
+    __viewport__: list[int] # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
     __ratio__: int          # 縮放比例，1->最小，100->最大
     __drag_start__: list[int] # 開始拖移的位置，相對於widget左上角的（x, y）座標
     __SHOWED_IMG__: PIL.ImageTk.PhotoImage
@@ -41,7 +41,7 @@ class ImageEditWindow(ttk.Label):
         # 圖片路徑
         self.FILE_PATH = file_path
         # 顯示的圖片範圍
-        self.__viewport__ = [0, 0, self.ORIGINAL_IMG.shape[0], self.ORIGINAL_IMG.shape[1]]
+        self.__viewport__ = [0, 0, self.ORIGINAL_IMG.shape[1], self.ORIGINAL_IMG.shape[0]]
         # 縮放比例
         self.__ratio__ = 100
 
@@ -74,8 +74,8 @@ class ImageEditWindow(ttk.Label):
         dy = int((self.__drag_start__[1] - event.y) * self.MOUSE_SENSITIVITY)
 
         # 移動viewport
-        self.__viewport__[0] += dy
-        self.__viewport__[1] += dx
+        self.__viewport__[0] += dx
+        self.__viewport__[1] += dy
 
         # 將現在的位置記下，這樣下次觸發 <B3-Motion> 時才能知道又移動了多少
         self.set_drag_start(event)
@@ -91,22 +91,28 @@ class ImageEditWindow(ttk.Label):
             event: tkinter的Event物件，用來知道滑鼠的位置
         """
         pixelX, pixelY = self.__to_original_pixel__(event.x, event.y)
-        old_r, old_c, old_dr, old_dc = self.__viewport__
+        old_x, old_y, old_dx, old_dy = self.__viewport__
 
         # 依滾動量，更新ratio
         delta = int(event.delta * self.WHEEL_SENSITIVITY)
         self.__ratio__ = np.clip(self.__ratio__ + delta, 1, 100)
 
         # 改變viewport的尺寸
-        new_dr = self.ORIGINAL_IMG.shape[0] * self.__ratio__ // 100  # 尺寸是以原圖的 ratio% 計算
-        new_dc = self.ORIGINAL_IMG.shape[1] * self.__ratio__ // 100
-        self.__viewport__[2:] = [new_dr, new_dc]
+        new_dx = self.ORIGINAL_IMG.shape[1] * self.__ratio__ // 100  # 尺寸是以原圖的 ratio% 計算
+        new_dy = self.ORIGINAL_IMG.shape[0] * self.__ratio__ // 100
+        self.__viewport__[2:] = [new_dx, new_dy]
 
         # 移動viewport，使得(pixelX, pixelY)在移動後的viewport中仍有一樣的相對位置
-        # (pixelY - r) / dr = (pixelY - r') / dr'
-        self.__viewport__[0] = pixelY - (pixelY - old_r) * new_dr // old_dr
-        # (pixelX - c) / dc = (pixelX - c') / dc'
-        self.__viewport__[1] = pixelX - (pixelX - old_c) * new_dc // old_dc
+        #
+        # (pixelX - x) / dx = (pixelX - x') / dx'
+        # 移項得 x' = pixelX - (pixelX - x) * dx' / dx
+        #
+        self.__viewport__[0] = pixelX - (pixelX - old_x) * new_dx // old_dx
+        #
+        # (pixelY - y) / dy = (pixelY - y') / dy'
+        # 移項得 y' = pixelY - (pixelY - y) * dy' / dy
+        #
+        self.__viewport__[1] = pixelY - (pixelY - old_y) * new_dy // old_dy
 
         # update
         self.__adjust_viewport__()
@@ -121,8 +127,8 @@ class ImageEditWindow(ttk.Label):
             event: 用不到，但為了將update傳進bind，所以還是留著
         """
         # 切割圖片
-        r, c, dr, dc = self.__viewport__
-        img = self.ORIGINAL_IMG[r : r+dr, c : c+dc]
+        x, y, dx, dy = self.__viewport__
+        img = self.ORIGINAL_IMG[y : y+dy, x : x+dx]
 
         # 調整圖片大小
         # 為什麼tkinter中的width是直的方向（？？？
@@ -146,12 +152,12 @@ class ImageEditWindow(ttk.Label):
         Return:
             (pixelX, pixelY): (x, y)對應到原圖中的 `self.ORIGINAL_IMG[pixelY][pixelX]`
         """
-        r, c, dr, dc = self.__viewport__
+        viewX, viewY, dx, dy = self.__viewport__
         IMG_ROW, IMG_COL, _ = self.ORIGINAL_IMG.shape
 
         # 為什麼tkinter中的height是橫的方向（？？？
-        pixelX = int(np.interp(x, [0, self.winfo_height()], [c, c + dc]))
-        pixelY = int(np.interp(y, [0, self.winfo_width()], [r, r + dr]))
+        pixelX = int(np.interp(x, [0, self.winfo_height()], [viewX, viewX + dx]))
+        pixelY = int(np.interp(y, [0, self.winfo_width()], [viewY, viewY + dy]))
         
         # 避免x, y出現在邊界而導致pixelX, pixelY超出邊界
         return np.clip((pixelX, pixelY), [0, 0], [IMG_COL - 1, IMG_ROW - 1])
@@ -161,10 +167,10 @@ class ImageEditWindow(ttk.Label):
         """
         調整viewport，避免移出圖片範圍
         """
-        r, c, dr, dc = self.__viewport__
+        x, y, dx, dy = self.__viewport__
 
-        r = np.clip(r, 0, self.ORIGINAL_IMG.shape[0] - dr)
-        c = np.clip(c, 0, self.ORIGINAL_IMG.shape[1] - dc)
+        x = np.clip(x, 0, self.ORIGINAL_IMG.shape[1] - dx)
+        y = np.clip(y, 0, self.ORIGINAL_IMG.shape[0] - dy)
 
-        self.__viewport__[0:2] = [r, c]
+        self.__viewport__[0:2] = [x, y]
     
