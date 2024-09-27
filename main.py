@@ -2,6 +2,8 @@ from image_edit_window import ImageEditWindow
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from tkinter import messagebox
+import json
 
 class MainFrame(ttk.Frame):
     """
@@ -20,9 +22,25 @@ class MainFrame(ttk.Frame):
         # 圖片顯示視窗
         self.__img_edit__ = ImageEditWindow(
             self
-            , filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])])
+            , filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir="./workspace/")
         )
         self.__img_edit__.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+
+        # 載入設定檔
+        self.__read_setting__()
+
+    def __read_setting__(self):
+        try:
+            f = open("./workspace/setting.json", "rt")
+            content = json.load(f)
+
+            if "WHEEL_SENSITIVITY" in content.keys():
+                self.__img_edit__.WHEEL_SENSITIVITY = content["WHEEL_SENSITIVITY"]
+            if "MOUSE_SENSITIVITY" in content.keys():
+                self.__img_edit__.MOUSE_SENSITIVITY = content["MOUSE_SENSITIVITY"]
+
+        except OSError:
+            messagebox.showwarning("setting.json not found", "無法載入./workspace/setting.json")
 
     pass # end of class MainFrame
 

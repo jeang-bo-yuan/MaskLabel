@@ -1,0 +1,5 @@
+{
+    "WHEEL_SENSITIVITY": -0.05,
+    "MOUSE_SENSITIVITY": 1,
+    "label": ["CrossWalk", "FArrow", "FLArrow", "FLRArrow", "FRArrow", "LArrow", "LRArrow", "RArrow", "ScooterWaitArea", "ScooterWaitTurnArea", "SpeedLimitMarking", "Stopline", "YellowGrid"]
+}
