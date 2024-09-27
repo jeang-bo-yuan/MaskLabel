@@ -131,7 +131,6 @@ class ImageEditWindow(ttk.Label):
         img = self.ORIGINAL_IMG[y : y+dy, x : x+dx]
 
         # 調整圖片大小
-        # 為什麼tkinter中的width是直的方向（？？？
         img = cv2.resize(img, (self.winfo_width(), self.winfo_height()))
         img = PIL.Image.fromarray(img)
         img = PIL.ImageTk.PhotoImage(img)
@@ -153,14 +152,11 @@ class ImageEditWindow(ttk.Label):
             (pixelX, pixelY): (x, y)對應到原圖中的 `self.ORIGINAL_IMG[pixelY][pixelX]`
         """
         viewX, viewY, dx, dy = self.__viewport__
-        IMG_ROW, IMG_COL, _ = self.ORIGINAL_IMG.shape
 
-        # 為什麼tkinter中的height是橫的方向（？？？
-        pixelX = int(np.interp(x, [0, self.winfo_height()], [viewX, viewX + dx]))
-        pixelY = int(np.interp(y, [0, self.winfo_width()], [viewY, viewY + dy]))
+        pixelX = int(np.interp(x, [0, self.winfo_width()], [viewX, viewX + dx]))
+        pixelY = int(np.interp(y, [0, self.winfo_height()], [viewY, viewY + dy]))
         
-        # 避免x, y出現在邊界而導致pixelX, pixelY超出邊界
-        return np.clip((pixelX, pixelY), [0, 0], [IMG_COL - 1, IMG_ROW - 1])
+        return (pixelX, pixelY)
     
 
     def __adjust_viewport__(self):
