@@ -12,14 +12,15 @@ class ImageEditWindow(ttk.Label):
     功能：
     - 顯示
     - Zoom In／Zoom Out（滑鼠滾輪）
-    - 拖動顯示範圍（按住滑鼠中鍵）
-    - 點擊畫面以新增mask的邊界點（滑鼠左鍵）
+    - 拖動顯示範圍（按住滑鼠右鍵）
     """
-    WHEEL_SENSITIVITY: int  = 0.05 # 滑鼠滾輪的靈敏度
+    WHEEL_SENSITIVITY: float  = 0.05 # 滑鼠滾輪的靈敏度
+    MOUSE_SENSITIVITY: float  = 1 # 滑鼠平移的靈敏度
     ORIGINAL_IMG: cv2.Mat   # 原始圖片
     FILE_PATH: str          # 圖檔路徑
     __viewport__: list[int] # 顯示範圍，[r, c, dr, dc]，分別代表 [起始列, 起始欄, 幾列, 幾欄]
     __ratio__: int          # 縮放比例，1->最小，100->最大
+    __drag_start__: list[int] # 開始拖移的位置，相對於widget左上角的（x, y）座標
     __SHOWED_IMG__: PIL.ImageTk.PhotoImage
 
 
@@ -45,13 +46,49 @@ class ImageEditWindow(ttk.Label):
         self.__ratio__ = 100
 
         # 綁定事件
+        self.bind("<Button-3>", self.set_drag_start) # 按下滑鼠右鍵時計下位置
+        self.bind("<B3-Motion>", self.pan)    # 按住滑鼠右鍵時可以平移viewport
         self.bind("<MouseWheel>", self.zoom)  # zoom in / zoom out
         self.bind("<Configure>", self.update) # 調整大小
 
 
+    def set_drag_start(self, event : tk.Event):
+        """
+        將 `event.x` 和 `event.y` 記錄在 `self.__drag_start__`
+
+        Args:
+            event: tkinter的Event物件
+        """
+        self.__drag_start__ = [event.x, event.y]
+
+
+    def pan(self, event : tk.Event):
+        """
+        平移viewport
+
+        Args:
+            event: tkinter的Event物件，用來知道滑鼠的位置
+        """
+        # 依據滑鼠移動的距離計算dx, dy
+        dx = int((self.__drag_start__[0] - event.x) * self.MOUSE_SENSITIVITY)
+        dy = int((self.__drag_start__[1] - event.y) * self.MOUSE_SENSITIVITY)
+
+        # 移動viewport
+        self.__viewport__[0] += dy
+        self.__viewport__[1] += dx
+
+        # 將現在的位置記下，這樣下次觸發 <B3-Motion> 時才能知道又移動了多少
+        self.set_drag_start(event)
+        # 更新畫面
+        self.__adjust_viewport__()
+        self.update(None)
+
     def zoom(self, event : tk.Event):
         """
         當滾動滑鼠時zoom in/ zoom out
+
+        Args:
+            event: tkinter的Event物件，用來知道滑鼠的位置
         """
         pixelX, pixelY = self.__to_original_pixel__(event.x, event.y)
         old_r, old_c, old_dr, old_dc = self.__viewport__
@@ -79,6 +116,9 @@ class ImageEditWindow(ttk.Label):
     def update(self, event : tk.Event | None):
         """
         更新顯示的圖片
+
+        Args:
+            event: 用不到，但為了將update傳進bind，所以還是留著
         """
         # 切割圖片
         r, c, dr, dc = self.__viewport__
@@ -113,7 +153,7 @@ class ImageEditWindow(ttk.Label):
         pixelX = int(np.interp(x, [0, self.winfo_height()], [c, c + dc]))
         pixelY = int(np.interp(y, [0, self.winfo_width()], [r, r + dr]))
         
-        # 避免x, y出現在邊界而導到pixelX, pixelY超出邊界
+        # 避免x, y出現在邊界而導致pixelX, pixelY超出邊界
         return np.clip((pixelX, pixelY), [0, 0], [IMG_COL - 1, IMG_ROW - 1])
     
 
