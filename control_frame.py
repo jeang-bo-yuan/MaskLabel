@@ -75,4 +75,18 @@ class ControlFrame(ttk.Frame):
         """
         self.event_generate("<<Repaint>>")
 
+    def reset_mask_list(self, database: list[dict]):
+        """
+        重設MASK_LIST中的內容
+
+        Args:
+            database: 包含所有的mask，每個mask都是一個dict，{'bbox': ..., 'label': ..., 'Mask': ...}
+        """
+        # 刪掉全部
+        self.MASK_LIST.delete(0, tk.END)
+
+        # 將database的內容塞入MASK_LIST
+        for mask_data in database:
+            self.MASK_LIST.insert(tk.END, mask_data['label'])
+
     pass # end of ControlFrame

@@ -47,6 +47,7 @@ class MainFrame(ttk.Frame):
         self.__polygon__ = Polygon()
         # database
         self.__mask_db__ = MaskDatabase()
+        self.reload_mask()
 
         # 載入設定檔
         self.__read_setting__()
@@ -61,6 +62,7 @@ class MainFrame(ttk.Frame):
         self.__control__.MASK_LIST.bind("<Double-Button-1>", self.__focus_on_mask__)
         self.__control__.MASK_LIST.bind("f", self.__focus_on_mask__)
         self.__control__.MASK_LIST.bind("<KeyPress-Delete>", self.__delete_mask__)
+        self.bind("<Destroy>", self.save_mask)
 
     def __read_setting__(self):
         try:
@@ -194,6 +196,19 @@ class MainFrame(ttk.Frame):
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
             self.__mask_db__.render(img, bbox)
 
+    def reload_mask(self, event: tk.Event = None):
+        """
+        重新載入 `./workspace/{img_file_name}.json`
+        """
+        self.__mask_db__.load_json(self.__img_edit__.FILE_NAME)
+        self.__control__.reset_mask_list(self.__mask_db__.__database__)
+
+    def save_mask(self, event: tk.Event = None):
+        """
+        將MASK_LIST中所有遮罩儲存下來
+        """
+        self.__mask_db__.write_json(self.__img_edit__.FILE_NAME)
+
     pass # end of class MainFrame
 
 def main():
@@ -206,6 +221,7 @@ def main():
 
         # 按鍵要綁在 root，不然 mainFrame 的 focus 可能會被其他按鈕搶走
         root.bind("<Control-Key-z>", mainframe.__delete_last_polygon_point__)
+        root.bind("<Control-Key-s>", mainframe.save_mask)
         root.geometry("=1000x600+20+20")
 
     btn = ttk.Button(root, text="點我開始", command=setup_mainFrame)
