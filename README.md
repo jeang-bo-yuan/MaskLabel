@@ -52,7 +52,7 @@ Step 7. 存檔
 
 按下`Control-s`或者在關閉視窗時，都會跳出是否要存檔的對話框。點擊「是」即可存檔。
 
-如果開啟的檔案是`foo.jpg`，那麼標記的結果會存在`./workspace/foo.jpn.json`內。
+如果開啟的檔案是`foo.jpg`，那麼標記的結果會存在`./workspace/foo.jpg.json`內。
 
 
 # Hot Keys
