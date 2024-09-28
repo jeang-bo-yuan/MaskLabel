@@ -27,7 +27,7 @@ class ImageEditWindow(ttk.Label):
     MOUSE_SENSITIVITY: float  = 1       # 滑鼠平移的靈敏度
     ORIGINAL_IMG: cv2.Mat               # 原始圖片
     FILE_PATH: str                      # 圖檔路徑
-    WINDOW_MESSAGE: tk.StringVar        # 欲顯示的資訊（含鼠標位置、viewport）
+    WINDOW_MESSAGE: tk.StringVar        # 欲顯示的資訊（含鼠標位置、可視範圍的(x1, y1, x2, y2)）
     __viewport__: list[int]             # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
     __ratio__: int                      # 縮放比例，1->最小，100->最大
     __drag_start__: list[int]           # 開始拖移的位置，相對於widget左上角的（x, y）座標
@@ -102,7 +102,7 @@ class ImageEditWindow(ttk.Label):
         self.set_drag_start(event)
         # 更新畫面
         self.__adjust_viewport__()
-        self.update(None)
+        self.update(event)
 
     def zoom(self, event : tk.Event):
         """
@@ -137,7 +137,7 @@ class ImageEditWindow(ttk.Label):
 
         # update
         self.__adjust_viewport__()
-        self.update(None)
+        self.update(event)
 
 
     def update(self, event : tk.Event | None):
@@ -145,8 +145,11 @@ class ImageEditWindow(ttk.Label):
         更新顯示的圖片
 
         Args:
-            event: 用不到，但為了將update傳進bind，所以還是留著
+            event: 若不為None，則順便更新 WINDOW_MESSAGE
         """
+        if event is not None:
+            self.update_message(event)
+
         # 切割圖片
         x, y, dx, dy = self.__viewport__
         img = self.ORIGINAL_IMG[y : y+dy, x : x+dx].copy()
@@ -173,7 +176,8 @@ class ImageEditWindow(ttk.Label):
             event: 用來取得滑鼠的位置
         """
         pixelX, pixelY = self.to_original_pixel(event.x, event.y)
-        self.WINDOW_MESSAGE.set(f"x: {pixelX}, y: {pixelY}, viewport: {self.__viewport__}")
+        x, y, w, h = self.__viewport__
+        self.WINDOW_MESSAGE.set(f"x: {pixelX}, y: {pixelY}\t\t\t可視範圍: (x1, y1, x2, y2) = {(x, y, x+w, y+h)}")
 
     
     def to_original_pixel(self, x : int, y : int) -> tuple[int, int]:
