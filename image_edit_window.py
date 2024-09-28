@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 import sys
+from typing import Callable
 import cv2
 import numpy as np
 import PIL.Image
@@ -15,25 +16,33 @@ class ImageEditWindow(ttk.Label):
     - 顯示
     - Zoom In／Zoom Out（滑鼠滾輪）
     - 拖動顯示範圍（按住滑鼠右鍵）
+
+    為了保持該widget的泛用性，我希望只保留上面3個基礎的功能，即檢視圖片的功能。
+    其他進階功能則要自己擴充，可能的擴充方向：
+    1. 將 WINDOW_MESSAGE 綁定到外部的Label上
+    2. 設置 render_callback ，這樣更新畫面時可以用自定的callback來繪製其他內容
+    3. 綁定按鍵事件到外部的函式上
     """
-    WHEEL_SENSITIVITY: float  = -0.05 # 滑鼠滾輪的靈敏度
-    MOUSE_SENSITIVITY: float  = 1 # 滑鼠平移的靈敏度
-    ORIGINAL_IMG: cv2.Mat   # 原始圖片
-    FILE_PATH: str          # 圖檔路徑
-    WINDOW_MESSAGE: tk.StringVar # 欲顯示的資訊（含鼠標位置、viewport）
-    __viewport__: list[int] # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
-    __ratio__: int          # 縮放比例，1->最小，100->最大
-    __drag_start__: list[int] # 開始拖移的位置，相對於widget左上角的（x, y）座標
+    WHEEL_SENSITIVITY: float  = -0.05   # 滑鼠滾輪的靈敏度
+    MOUSE_SENSITIVITY: float  = 1       # 滑鼠平移的靈敏度
+    ORIGINAL_IMG: cv2.Mat               # 原始圖片
+    FILE_PATH: str                      # 圖檔路徑
+    WINDOW_MESSAGE: tk.StringVar        # 欲顯示的資訊（含鼠標位置、viewport）
+    __viewport__: list[int]             # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
+    __ratio__: int                      # 縮放比例，1->最小，100->最大
+    __drag_start__: list[int]           # 開始拖移的位置，相對於widget左上角的（x, y）座標
+    __render_callback__: Callable[[cv2.Mat, tuple[int]], None] | None # 繪製額外資訊的callback，參數有兩個：切割後的圖片、在原圖片中的bounding box (x, y, w, h)
     __SHOWED_IMG__: PIL.ImageTk.PhotoImage
 
 
-    def __init__(self, master: tk.Misc, file_path: str):
+    def __init__(self, master: tk.Misc, file_path: str, render_callback: Callable[[cv2.Mat, tuple[int]], None] | None = None):
         """
         初始化一個畫面編輯視窗
 
         Args:
             master: 屬於哪個Widget
             file_path: 圖片的路徑
+            render_callback: 用來繪製額外資訊的callback，參數有兩個：切割後的圖片、在原圖片中的bounding box (x, y, w, h)
         """
         ttk.Label.__init__(self, master, text="", anchor=tk.NW)
 
@@ -53,6 +62,8 @@ class ImageEditWindow(ttk.Label):
         self.__viewport__ = [0, 0, self.ORIGINAL_IMG.shape[1], self.ORIGINAL_IMG.shape[0]]
         # 縮放比例
         self.__ratio__ = 100
+        # render callback
+        self.__render_callback__ = render_callback
 
         # 綁定事件
         self.bind("<Button-3>", self.set_drag_start) # 按下滑鼠右鍵時計下位置
@@ -100,7 +111,7 @@ class ImageEditWindow(ttk.Label):
         Args:
             event: tkinter的Event物件，用來知道滑鼠的位置
         """
-        pixelX, pixelY = self.__to_original_pixel__(event.x, event.y)
+        pixelX, pixelY = self.to_original_pixel(event.x, event.y)
         old_x, old_y, old_dx, old_dy = self.__viewport__
 
         # 依滾動量，更新ratio
@@ -138,7 +149,11 @@ class ImageEditWindow(ttk.Label):
         """
         # 切割圖片
         x, y, dx, dy = self.__viewport__
-        img = self.ORIGINAL_IMG[y : y+dy, x : x+dx]
+        img = self.ORIGINAL_IMG[y : y+dy, x : x+dx].copy()
+
+        # 呼叫 render callback
+        if self.__render_callback__ is not None:
+            self.__render_callback__(img, self.__viewport__)
 
         # 調整圖片大小
         img = cv2.resize(img, (self.winfo_width(), self.winfo_height()))
@@ -157,17 +172,17 @@ class ImageEditWindow(ttk.Label):
         Args:
             event: 用來取得滑鼠的位置
         """
-        pixelX, pixelY = self.__to_original_pixel__(event.x, event.y)
+        pixelX, pixelY = self.to_original_pixel(event.x, event.y)
         self.WINDOW_MESSAGE.set(f"x: {pixelX}, y: {pixelY}, viewport: {self.__viewport__}")
 
     
-    def __to_original_pixel__(self, x : int, y : int) -> tuple[int, int]:
+    def to_original_pixel(self, x : int, y : int) -> tuple[int, int]:
         """
         在widget中的(x, y)對應到原圖中的哪個像素
 
         Args:
-            x: 離widget的左邊界幾個像素
-            y: 離widget的上邊界幾個像素
+            x: 離widget的左邊界幾個像素。範圍：[0, self.winfo_width())
+            y: 離widget的上邊界幾個像素。範圍：[0, self.winfo_height())
 
         Return:
             (pixelX, pixelY): (x, y)對應到原圖中的 `self.ORIGINAL_IMG[pixelY][pixelX]`

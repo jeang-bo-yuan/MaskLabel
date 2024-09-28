@@ -73,7 +73,6 @@ class ControlFrame(ttk.Frame):
         Args:
             args: trace_add 的 callback 需要傳3個str，但我用不到
         """
-        print("Repaint")
         self.event_generate("<<Repaint>>")
 
     pass # end of ControlFrame
