@@ -132,7 +132,7 @@ class MainFrame(ttk.Frame):
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
             self.__img_edit__.update(None)
 
-    def __delete_mask__(self, event: tk.Event):
+    def __delete_mask__(self, event: tk.Event = None):
         """
         看MASK_LIST中哪個mask被選到就將它刪掉
 
@@ -141,15 +141,17 @@ class MainFrame(ttk.Frame):
         """
         # 所有選中的項目（型別為tuple）
         indices = self.__control__.MASK_LIST.curselection()
+        if len(indices) == 0:
+            return
         
-        for id in indices:
-            label = self.__control__.MASK_LIST.get(id)
+        idx = indices[0]
+        label = self.__control__.MASK_LIST.get(idx)
 
-            if messagebox.askyesno("Delete", f"確定要刪掉 {label} (index={id}) 嗎？"):
-                # 從list刪掉
-                self.__control__.MASK_LIST.delete(id)
-                # 從db刪掉
-                self.__mask_db__.delete(id)
+        if messagebox.askyesno("Delete", f"確定要刪掉 {label} (index={idx}) 嗎？"):
+            # 從list刪掉
+            self.__control__.MASK_LIST.delete(idx)
+            # 從db刪掉
+            self.__mask_db__.delete(idx)
 
         # 如果有要繪製mask的bounding box，則要重新更新畫面
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
