@@ -139,6 +139,41 @@ class ImageEditWindow(ttk.Label):
         self.__adjust_viewport__()
         self.update(event)
 
+    def change_viewport(self, view: tuple[int]):
+        """
+        改變可視範圍，使之包含view指定的區域
+
+        Args:
+            view: (x, y, w, h)
+        """
+        viewX, viewY, viewW, viewH = view
+        IMG_H, IMG_W, _ = self.ORIGINAL_IMG.shape
+
+        # 改變ratio
+        # 看 viewW 和 viewH 相對於 IMG_W 和 IMG_H 的比例，哪個大選哪個
+        ratioW = viewW * 100.0 / IMG_W
+        ratioH = viewH * 100.0 / IMG_H
+        ratio = np.clip(np.max((ratioW, ratioH)), 1, 100) # 使用浮點數
+        self.__ratio__ = int(ratio)
+
+        # 調整viewport大小
+        # 為了讓可視範圍盡量接近view，所以先用浮點數計算，最後再轉int
+        viewportW = int(np.ceil(IMG_W * ratio / 100.0))
+        viewportH = int(np.ceil(IMG_H * ratio / 100.0))
+        self.__viewport__[2:4] = [viewportW, viewportH]
+
+        # 移動viewport
+        # 若寬的比例比較大 -> 可視範圍的寬度會和view的寬差不多。此時，我希望view可以盡量垂直置中。
+        if ratioW > ratioH:
+            self.__viewport__[0:2] = [viewX, viewY - (viewportH - viewH) // 2]
+        # 反之，可視範圍的高會和view差不多。此時，我希望view可以盡量水平置中。
+        else:
+            self.__viewport__[0:2] = [viewX - (viewportW - viewW) // 2, viewY]
+
+        # 更新畫面
+        self.__adjust_viewport__()
+        self.update(None)
+
 
     def update(self, event : tk.Event | None):
         """

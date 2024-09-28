@@ -8,6 +8,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 import json
 import cv2
+import numpy as np
 
 class MainFrame(ttk.Frame):
     """
@@ -57,6 +58,9 @@ class MainFrame(ttk.Frame):
         self.__control__.CLEAR_BTN.configure(command=self.__clear_polygon_point__)
         self.__control__.ADD_MASK_BTN.configure(command=self.__add_mask__)     # 按下按鈕->加入mask
         self.__control__.DEL_MASK_BTN.configure(command=self.__delete_mask__)  # 按下按鈕->移除mask
+        self.__control__.MASK_LIST.bind("<Double-Button-1>", self.__focus_on_mask__)
+        self.__control__.MASK_LIST.bind("f", self.__focus_on_mask__)
+        self.__control__.MASK_LIST.bind("<KeyPress-Delete>", self.__delete_mask__)
 
     def __read_setting__(self):
         try:
@@ -119,6 +123,8 @@ class MainFrame(ttk.Frame):
         label = self.__control__.LABEL_COMBO.get()
         # 在MASK_LIST中新增一個欄位，它的名字為「label」
         self.__control__.MASK_LIST.insert(tk.END, label)
+        self.__control__.MASK_LIST.selection_clear(0, tk.END)
+        self.__control__.MASK_LIST.selection_set(tk.END)
         # 加進database
         self.__mask_db__.append(bbox, label, img.tolist())
 
@@ -126,9 +132,12 @@ class MainFrame(ttk.Frame):
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
             self.__img_edit__.update(None)
 
-    def __delete_mask__(self):
+    def __delete_mask__(self, event: tk.Event):
         """
         看MASK_LIST中哪個mask被選到就將它刪掉
+
+        Args:
+            event: 沒用到
         """
         # 所有選中的項目（型別為tuple）
         indices = self.__control__.MASK_LIST.curselection()
@@ -146,6 +155,28 @@ class MainFrame(ttk.Frame):
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
             self.__img_edit__.update(None)
         
+    def __focus_on_mask__(self, event: tk.Event):
+        """ 
+        將可視範圍聚焦在選定的mask上
+
+        Args:
+            event: 用不到，但為了傳給bind，所以還是留著
+        """
+        indicies = self.__control__.MASK_LIST.curselection()
+        if len(indicies) == 0:
+            return
+        
+        mask_data = self.__mask_db__.query(indicies[0])
+
+        # 改viewport
+        x1, y1, x2, y2 = mask_data['bbox']
+        self.__img_edit__.change_viewport((x1, y1, x2 - x1, y2 - y1))
+
+        # 顯示mask
+        if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
+            cv2.destroyWindow("mask")
+        cv2.imshow("mask", np.array(mask_data['Mask'], dtype=np.uint8))
+
 
     def __render_polygon_and_box__(self, img: cv2.Mat, bbox: tuple[int]):
         """
