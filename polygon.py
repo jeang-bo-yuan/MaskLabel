@@ -47,7 +47,33 @@ class Polygon:
         pts[:, :, 0] -= bbox[0]   # 移動，使每一個點的座標變成相對於bbox的左上角
         pts[:, :, 1] -= bbox[1]
 
-        cv2.polylines(img, [pts], close, (0, 0, 255), 1)
+        cv2.polylines(img, [pts], close, (0, 0, 255), 1, cv2.LINE_AA)
 
         for i in range(pts.shape[0]):
             cv2.circle(img, pts[i, 0], 3, (255, 0, 0))
+
+    def toMask(self) -> tuple[tuple[int], cv2.Mat] | tuple[None, None]:
+        """
+        將多邊形包住的範圍變成mask，並計算bbox
+
+        Return:
+            (bbox, mask_img): bbox是(x1, y1, x2, y2)，而mask_img是一張黑白圖片（shape = H * W）白色為遮罩，
+                              如果polygon沒有3個點則回傳None
+        """
+        if len(self.__points__) < 3:
+            return None, None
+
+        pts = np.array(self.__points__, dtype=np.int32)
+        pts = pts.reshape((-1, 1, 2))
+
+        x, y, w, h = cv2.boundingRect(pts)
+
+        pts[:, :, 0] -= x  # 移動每個點，使其相對於bbox的左上角
+        pts[:, :, 1] -= y
+
+        img = np.zeros((h, w), dtype=np.uint8)
+        cv2.fillPoly(img, [pts], (255), cv2.LINE_4)
+
+        return (x, y, x + w, y + h), img
+
+        

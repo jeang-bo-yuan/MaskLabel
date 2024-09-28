@@ -1,6 +1,7 @@
 from image_edit_window import ImageEditWindow
 from control_frame import ControlFrame
 from polygon import Polygon
+from mask_database import MaskDatabase
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
@@ -17,6 +18,7 @@ class MainFrame(ttk.Frame):
     __img_edit__: ImageEditWindow # 圖片顯示視窗
     __control__: ControlFrame     # 控制面版
     __polygon__: Polygon          # 多邊形
+    __mask_db__: MaskDatabase     # 儲存所有的Mask
 
     def __init__(self, master: tk.Misc):
         """
@@ -42,6 +44,8 @@ class MainFrame(ttk.Frame):
 
         # 多邊形
         self.__polygon__ = Polygon()
+        # database
+        self.__mask_db__ = MaskDatabase()
 
         # 載入設定檔
         self.__read_setting__()
@@ -51,6 +55,8 @@ class MainFrame(ttk.Frame):
         self.__control__.bind("<<Repaint>>", self.__img_edit__.update)   # 收到repaint後更新畫面
         self.__control__.DELETE_BTN.configure(command=self.__delete_last_polygon_point__)
         self.__control__.CLEAR_BTN.configure(command=self.__clear_polygon_point__)
+        self.__control__.ADD_MASK_BTN.configure(command=self.__add_mask__)     # 按下按鈕->加入mask
+        self.__control__.DEL_MASK_BTN.configure(command=self.__delete_mask__)  # 按下按鈕->移除mask
 
     def __read_setting__(self):
         try:
@@ -96,6 +102,43 @@ class MainFrame(ttk.Frame):
         """
         self.__polygon__.clear()
         self.__img_edit__.update(None)
+
+    def __add_mask__(self):
+        """
+        將__polygon__轉成遮罩，然後把它加入__mask_db__和MASK_LIST
+        """
+        bbox, img = self.__polygon__.toMask()
+        if bbox is None:
+            messagebox.showerror("Error", "至少需要3個點")
+            return
+        
+        print(bbox)
+        if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
+            cv2.destroyWindow("mask")
+        cv2.imshow("mask", img)
+
+        label = self.__control__.LABEL_COMBO.get()
+        # 在MASK_LIST中新增一個欄位，它的名字為「label」
+        self.__control__.MASK_LIST.insert(tk.END, label)
+        # 加進database
+        self.__mask_db__.append(bbox, label, img.tolist())
+
+    def __delete_mask__(self):
+        """
+        看MASK_LIST中哪個mask被選到就將它刪掉
+        """
+        # 所有選中的項目（型別為tuple）
+        indices = self.__control__.MASK_LIST.curselection()
+        
+        for id in indices:
+            label = self.__control__.MASK_LIST.get(id)
+
+            if messagebox.askyesno("Delete", f"確定要刪掉 {label} (index={id}) 嗎？"):
+                # 從list刪掉
+                self.__control__.MASK_LIST.delete(id)
+                # 從db刪掉
+                self.__mask_db__.delete(id)
+        
 
     def __render_polygon_and_box__(self, img: cv2.Mat, bbox: tuple[int]):
         """
