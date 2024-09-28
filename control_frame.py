@@ -51,7 +51,7 @@ class ControlFrame(ttk.Frame):
         self.DEL_MASK_BTN = ttk.Button(self, text="刪除Mask")
         self.DEL_MASK_BTN.grid(row=5, column=2, columnspan=2, sticky=(tk.W, tk.E))
 
-        self.SHOULD_DRAW_MASK_BOX = tk.StringVar(value='0')
+        self.SHOULD_DRAW_MASK_BOX = tk.StringVar(value='1')
         ttk.Checkbutton(self, text="繪製Mask的Bounding Box", variable=self.SHOULD_DRAW_MASK_BOX).grid(row=6, column=0, columnspan=4, sticky=(tk.W, tk.E))
 
         # Mask 列表

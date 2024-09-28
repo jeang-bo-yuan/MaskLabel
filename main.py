@@ -112,7 +112,6 @@ class MainFrame(ttk.Frame):
             messagebox.showerror("Error", "至少需要3個點")
             return
         
-        print(bbox)
         if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
             cv2.destroyWindow("mask")
         cv2.imshow("mask", img)
@@ -122,6 +121,10 @@ class MainFrame(ttk.Frame):
         self.__control__.MASK_LIST.insert(tk.END, label)
         # 加進database
         self.__mask_db__.append(bbox, label, img.tolist())
+
+        # 如果有要繪製mask的bounding box，則要重新更新畫面
+        if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
+            self.__img_edit__.update(None)
 
     def __delete_mask__(self):
         """
@@ -138,6 +141,10 @@ class MainFrame(ttk.Frame):
                 self.__control__.MASK_LIST.delete(id)
                 # 從db刪掉
                 self.__mask_db__.delete(id)
+
+        # 如果有要繪製mask的bounding box，則要重新更新畫面
+        if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
+            self.__img_edit__.update(None)
         
 
     def __render_polygon_and_box__(self, img: cv2.Mat, bbox: tuple[int]):
@@ -150,6 +157,9 @@ class MainFrame(ttk.Frame):
         """
         close = self.__control__.SHOULD_CLOSE.get() == '1'
         self.__polygon__.render(img, bbox, close)
+
+        if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
+            self.__mask_db__.render(img, bbox)
 
     pass # end of class MainFrame
 
