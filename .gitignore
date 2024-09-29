@@ -1,5 +1,2 @@
 __pycache__/
-workspace/*.jpg
-workspace/*.png
-workspace/*.tif
-workspace/*.json
+workspace/*

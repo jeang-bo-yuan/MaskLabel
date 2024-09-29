@@ -67,39 +67,40 @@ class MaskDatabase:
         Args:
             img_file_name: 圖檔的名字，嘗試讀取`./workspace/{img_file_name}.json`並進行初始化。若該json不存在或不合格式則將__database__清空
         """
-        path = f'./workspace/{img_file_name}.json'
+        JSON_PATH = f'./workspace/{img_file_name}.json'
+        basename = os.path.basename(img_file_name)
 
-        if not os.path.exists(path):
-            messagebox.showinfo("File Not Found", f'{path} 不存在，一切將從零開始')
+        if not os.path.exists(JSON_PATH):
+            messagebox.showinfo("File Not Found", f'{JSON_PATH} 不存在，一切將從零開始')
             self.__database__.clear()
             return
         
         try:
-            with open(path, 'rt') as f:
+            with open(JSON_PATH, 'rt') as f:
                 content = json.load(f)
-                assert img_file_name in content.keys(), f'{path} 沒有包含 "{img_file_name}" 這個key'
+                assert basename in content.keys(), f'{JSON_PATH} 沒有包含 "{basename}" 這個key'
                 
-                mask_data = content[img_file_name]
+                mask_data = content[basename]
 
                 for k in mask_data.keys():
-                    assert 'bbox' in mask_data[k],                        f'{path} 中的 "{img_file_name}"/"{k}"         沒有 "bbox" 這個key'
-                    assert type(mask_data[k]['bbox']) == list,            f'{path} 中的 "{img_file_name}"/"{k}"/"bbox"  應該要是整數列表'
-                    assert len(mask_data[k]['bbox']) == 4,                f'{path} 中的 "{img_file_name}"/"{k}"/"bbox"  應該要是長度4'
-                    assert 'label' in mask_data[k],                       f'{path} 中的 "{img_file_name}"/"{k}"         沒有 "label" 這個key'
-                    assert type(mask_data[k]['label']) == str,            f'{path} 中的 "{img_file_name}"/"{k}"/"label" 應該要是字串'
-                    assert 'Mask' in mask_data[k],                        f'{path} 中的 "{img_file_name}"/"{k}"         沒有 "Mask" 這個key'
-                    assert type(mask_data[k]['Mask']) == list,            f'{path} 中的 "{img_file_name}"/"{k}"/"Mask"  應該要是整數二維陣列'
+                    assert 'bbox' in mask_data[k],                        f'{JSON_PATH} 中的 "{basename}"/"{k}"         沒有 "bbox" 這個key'
+                    assert type(mask_data[k]['bbox']) == list,            f'{JSON_PATH} 中的 "{basename}"/"{k}"/"bbox"  應該要是整數列表'
+                    assert len(mask_data[k]['bbox']) == 4,                f'{JSON_PATH} 中的 "{basename}"/"{k}"/"bbox"  應該要是長度4'
+                    assert 'label' in mask_data[k],                       f'{JSON_PATH} 中的 "{basename}"/"{k}"         沒有 "label" 這個key'
+                    assert type(mask_data[k]['label']) == str,            f'{JSON_PATH} 中的 "{basename}"/"{k}"/"label" 應該要是字串'
+                    assert 'Mask' in mask_data[k],                        f'{JSON_PATH} 中的 "{basename}"/"{k}"         沒有 "Mask" 這個key'
+                    assert type(mask_data[k]['Mask']) == list,            f'{JSON_PATH} 中的 "{basename}"/"{k}"/"Mask"  應該要是整數二維陣列'
 
                     self.__database__.append({
                         'bbox': mask_data[k]['bbox'], 'label': mask_data[k]['label'], 'Mask': mask_data[k]['Mask']
                     })
 
         except Exception as e:
-            messagebox.showerror("Invalid", f'{repr(e)}。\n{path} 不合格式，即將清空所有遮罩')
+            messagebox.showerror("Invalid", f'{repr(e)}。\n{JSON_PATH} 不合格式，即將清空所有遮罩')
             self.__database__.clear()
             return
         
-        messagebox.showinfo("Loading Succeeds", f'成功載入 {path}')
+        messagebox.showinfo("Loading Succeeds", f'成功載入 {JSON_PATH}')
         
     def write_json(self, img_file_name: str):
         """
@@ -119,19 +120,20 @@ class MaskDatabase:
         Args:
             img_file_name: 圖片的名字
         """
-        path = f'./workspace/{img_file_name}.json'
+        JSON_PATH = f'./workspace/{img_file_name}.json'
+        basename = os.path.basename(img_file_name)
 
-        if not messagebox.askyesno("Save", f'是否要將標記的結果存進 {path} ?'):
+        if not messagebox.askyesno("Save", f'是否要將標記的結果存進 {JSON_PATH} ?'):
             return
         
         try:
-            with open(path, 'wt') as f:
-                out_data = { img_file_name: dict() }
+            with open(JSON_PATH, 'wt') as f:
+                out_data = { basename: dict() }
 
                 for i, v in enumerate(self.__database__):
-                    out_data[img_file_name][i] = v
+                    out_data[basename][i] = v
 
-                f.write(json.dumps(out_data, indent=4))
+                f.write(json.dumps(out_data, indent=4, ensure_ascii=False))
         except Exception as e:
             messagebox.showerror("Save Fail", f'儲存失敗，原因\nrepr(e)')
         else:

@@ -18,7 +18,9 @@ git clone https://github.com/jeang-bo-yuan/MaskLabel
 cd MaskLabel
 ```
 
-Step2. 將要標記的圖片放在`workspace/`下
+Step2. 將要標記的圖片放在`workspace/`下（非必要）
+
+程式開啟的file dialog的預設路徑為`workspace/`，將圖片放在`workspace/`下會比較好找。
 
 Step3. 執行`main.py`
 
@@ -26,9 +28,11 @@ Step3. 執行`main.py`
 python main.py
 ```
 
-Step4. 選擇要標記的圖片，選擇圖片後會自動從`workspace/`中讀取相對應的json檔以繼續之前的進度。
+Step4. 選擇要標記的圖片
 
-如果是第一次開啟圖片的話，會出現如下的訊息，提示你`workspace/`中還沒有這張圖片的標記結果。
+選擇圖片後會自動從「該圖片所在資料夾」讀取相對應的json檔以繼續之前的進度。
+
+如果是第一次開啟圖片的話，會出現如下的訊息，提示你還沒有這張圖片的標記結果。
 
 ![](doc/first_open.png)
 
@@ -52,7 +56,7 @@ Step 7. 存檔
 
 按下`Control-s`或者在關閉視窗時，都會跳出是否要存檔的對話框。點擊「是」即可存檔。
 
-如果開啟的檔案是`foo.jpg`，那麼標記的結果會存在`./workspace/foo.jpg.json`內。
+如果開啟的檔案是`foo.jpg`，那麼標記的結果會存在`foo.jpg.json`內，該json檔會放在和原圖片同樣的資料夾下。
 
 
 # Hot Keys

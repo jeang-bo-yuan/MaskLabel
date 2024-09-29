@@ -27,7 +27,7 @@ class ImageEditWindow(ttk.Label):
     WHEEL_SENSITIVITY: float  = -0.05   # 滑鼠滾輪的靈敏度
     MOUSE_SENSITIVITY: float  = 1       # 滑鼠平移的靈敏度
     ORIGINAL_IMG: cv2.Mat               # 原始圖片
-    FILE_NAME: str                      # 圖檔的名字
+    FILE_NAME: str                      # 圖檔的名字，其值為：相對於'./workspace'的相對路徑
     WINDOW_MESSAGE: tk.StringVar        # 欲顯示的資訊（含鼠標位置、可視範圍的(x1, y1, x2, y2)）
     __viewport__: list[int]             # 顯示範圍，[x, y, dx, dy]，分別代表 [起始x座標, 起始y座標, 水平長度, 垂直長度]，意義跟 cv2.boundingRect 的回傳值一樣
     __ratio__: int                      # 縮放比例，1->最小，100->最大
@@ -51,14 +51,13 @@ class ImageEditWindow(ttk.Label):
         # 解決「當路徑中有Unicode字元時」造成cv2.imread失敗的問題
         # https://jdhao.github.io/2019/09/11/opencv_unicode_image_path/#google_vignette
         try:
-            file_path = os.path.relpath(file_path, '.')
             self.ORIGINAL_IMG = cv2.imdecode(np.fromfile(file_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             assert self.ORIGINAL_IMG is not None
         except:
             messagebox.showerror("Error", f"無法開啟圖片 \"{file_path}\"")
             sys.exit(-1)
         # 圖檔的名字
-        self.FILE_NAME = os.path.basename(file_path)
+        self.FILE_NAME = os.path.relpath(file_path, './workspace')
         # 顯示資訊
         self.WINDOW_MESSAGE = tk.StringVar(value=f'載入 {file_path} 成功')
         # 顯示的圖片範圍
