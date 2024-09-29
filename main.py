@@ -7,9 +7,12 @@ from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 import json
+import sys
 import os.path
 import cv2
 import numpy as np
+
+WORKSPACE_DIR = f'{os.path.dirname(__file__)}/workspace'
 
 class MainFrame(ttk.Frame):
     """
@@ -31,7 +34,9 @@ class MainFrame(ttk.Frame):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
-        IMG_ABS_PATH = filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir="./workspace/")
+        IMG_ABS_PATH = filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir=WORKSPACE_DIR)
+        if IMG_ABS_PATH == "":
+            sys.exit(0)
         self.IMG_REL_PATH = os.path.relpath(IMG_ABS_PATH, '.')
 
         # 圖片顯示視窗
@@ -71,7 +76,7 @@ class MainFrame(ttk.Frame):
 
     def __read_setting__(self):
         try:
-            f = open("./workspace/setting.json", "rt")
+            f = open(f"{WORKSPACE_DIR}/setting.json", "rt")
             content = json.load(f)
             f.close()
 
@@ -84,7 +89,7 @@ class MainFrame(ttk.Frame):
                 self.__control__.LABEL_COMBO.set(content['label'][0])
 
         except OSError:
-            messagebox.showwarning("setting.json not found", "無法載入./workspace/setting.json")
+            messagebox.showwarning("setting.json not found", f"無法載入{WORKSPACE_DIR}/setting.json")
 
     def __add_polygon_point__(self, event: tk.Event):
         """
