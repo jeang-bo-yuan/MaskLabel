@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 import json
+import os.path
 import cv2
 import numpy as np
 
@@ -16,6 +17,7 @@ class MainFrame(ttk.Frame):
 
     主要功能： 當作__img_edit__和__control__間溝通的橋梁，如果有功能會同時用到這兩個widget，則會在MainFrame實作
     """
+    IMG_REL_PATH: str             # 圖片的相對路徑（相對於工作目錄）
     __img_edit__: ImageEditWindow # 圖片顯示視窗
     __control__: ControlFrame     # 控制面版
     __polygon__: Polygon          # 多邊形
@@ -29,10 +31,13 @@ class MainFrame(ttk.Frame):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
 
+        IMG_ABS_PATH = filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir="./workspace/")
+        self.IMG_REL_PATH = os.path.relpath(IMG_ABS_PATH, '.')
+
         # 圖片顯示視窗
         self.__img_edit__ = ImageEditWindow(
             self
-            , file_path= filedialog.askopenfilename(filetypes=[("img", ["*.jpg", "*.png", "*.tif"])], initialdir="./workspace/")
+            , file_path= IMG_ABS_PATH
             , render_callback= self.__render_polygon_and_box__
         )
         self.__img_edit__.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
@@ -198,16 +203,16 @@ class MainFrame(ttk.Frame):
 
     def reload_mask(self, event: tk.Event = None):
         """
-        重新載入 `./workspace/{img_file_name}.json`
+        重新載入 `{self.IMG_REL_PATH}.json`
         """
-        self.__mask_db__.load_json(self.__img_edit__.FILE_NAME)
+        self.__mask_db__.load_json(self.IMG_REL_PATH)
         self.__control__.reset_mask_list(self.__mask_db__.__database__)
 
     def save_mask(self, event: tk.Event = None):
         """
         將MASK_LIST中所有遮罩儲存下來
         """
-        self.__mask_db__.write_json(self.__img_edit__.FILE_NAME)
+        self.__mask_db__.write_json(self.IMG_REL_PATH)
 
     pass # end of class MainFrame
 

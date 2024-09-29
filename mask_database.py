@@ -60,15 +60,16 @@ class MaskDatabase:
             # 因為mask是位在 x 屬於 [x1, x2) 且 y 屬於 [y1, y2) 的區域，所以右下角的座標要減一
             cv2.rectangle(img, (x1 - x, y1 - y), (x2 - x - 1, y2 - y - 1), (191, 93, 2))
 
-    def load_json(self, img_file_name: str):
+    def load_json(self, img_path: str):
         """
-        讀取json檔中的內容，並將其存進__database__
+        讀取json檔中的內容，並將其存進__database__。
+        嘗試讀取`{img_path}.json`並進行初始化。若該json不存在或不合格式則將__database__清空。
 
         Args:
-            img_file_name: 圖檔的名字，嘗試讀取`./workspace/{img_file_name}.json`並進行初始化。若該json不存在或不合格式則將__database__清空
+            img_path: 圖檔的路徑，路徑的basename要是圖檔的檔名
         """
-        JSON_PATH = f'./workspace/{img_file_name}.json'
-        basename = os.path.basename(img_file_name)
+        JSON_PATH = f'{img_path}.json'
+        basename = os.path.basename(img_path)
 
         if not os.path.exists(JSON_PATH):
             messagebox.showinfo("File Not Found", f'{JSON_PATH} 不存在，一切將從零開始')
@@ -102,9 +103,9 @@ class MaskDatabase:
         
         messagebox.showinfo("Loading Succeeds", f'成功載入 {JSON_PATH}')
         
-    def write_json(self, img_file_name: str):
+    def write_json(self, img_path: str):
         """
-        將__database__輸出到 `./workspace/{img_file_name}.json`，輸出格式：
+        將__database__輸出到 `{img_path}.json`，輸出格式：
         ```
         {
             img_file_name: {
@@ -118,10 +119,10 @@ class MaskDatabase:
         ```
 
         Args:
-            img_file_name: 圖片的名字
+            img_path: 圖片的路徑，路徑的basename要是圖檔的檔名
         """
-        JSON_PATH = f'./workspace/{img_file_name}.json'
-        basename = os.path.basename(img_file_name)
+        JSON_PATH = f'{img_path}.json'
+        basename = os.path.basename(img_path)
 
         if not messagebox.askyesno("Save", f'是否要將標記的結果存進 {JSON_PATH} ?'):
             return
@@ -133,7 +134,7 @@ class MaskDatabase:
                 for i, v in enumerate(self.__database__):
                     out_data[basename][i] = v
 
-                f.write(json.dumps(out_data, indent=4, ensure_ascii=False))
+                f.write(json.dumps(out_data, indent=4, ensure_ascii=True))
         except Exception as e:
             messagebox.showerror("Save Fail", f'儲存失敗，原因\nrepr(e)')
         else:
