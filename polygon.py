@@ -46,13 +46,16 @@ class Polygon:
         pts = np.array(self.__points__, dtype=np.int32)
         pts = pts.reshape((-1, 1, 2))  # 調成 n * 1 * 2
 
-        pts[:, :, 0] -= bbox[0]   # 移動，使每一個點的座標變成相對於bbox的左上角
-        pts[:, :, 1] -= bbox[1]
+        x, y, w, h = bbox
+        thick = int(np.max((w * 0.001, h * 0.001, 1)))
 
-        cv2.polylines(img, [pts], close, (0, 0, 255), 1, cv2.LINE_AA)
+        pts[:, :, 0] -= x   # 移動，使每一個點的座標變成相對於bbox的左上角
+        pts[:, :, 1] -= y
+
+        cv2.polylines(img, [pts], close, (0, 0, 255), thick, cv2.LINE_AA)
 
         for i in range(pts.shape[0]):
-            cv2.circle(img, pts[i, 0], 3, (255, 0, 0))
+            cv2.circle(img, pts[i, 0], thick * 3, (255, 0, 0), thick)
 
     # 轉換成輸出格式 ########################################################################################################
 

@@ -80,7 +80,8 @@ class MaskDatabase:
             img: 要畫在哪個圖片上
             bbox: img在原圖中的位置(x, y, w, h)
         """
-        x, y = bbox[0:2]
+        x, y, w, h = bbox
+        thick = int(np.max((w * 0.001, h * 0.001, 1)))
 
         # 對於每個mask
         for mask_data in self.__database__:
@@ -89,7 +90,7 @@ class MaskDatabase:
 
             # 繪製時要將座標轉成相對於可視範圍的左上角
             # 因為mask是位在 x 屬於 [x1, x2) 且 y 屬於 [y1, y2) 的區域，所以右下角的座標要減一
-            cv2.rectangle(img, (x1 - x, y1 - y), (x2 - x - 1, y2 - y - 1), (191, 93, 2))
+            cv2.rectangle(img, (x1 - x, y1 - y), (x2 - x - 1, y2 - y - 1), (191, 93, 2), thickness=thick, lineType=cv2.LINE_AA)
 
         if self.__hilight_cnt__ is not None:
             # 將圖片複製一份
