@@ -69,27 +69,13 @@ class MainFrame(ttk.Frame):
         self.__control__.CLEAR_BTN.configure(command=self.__clear_polygon_point__)
         self.__control__.ADD_MASK_BTN.configure(command=self.__add_mask__)     # 按下按鈕->加入mask
         self.__control__.DEL_MASK_BTN.configure(command=self.__delete_mask__)  # 按下按鈕->移除mask
+        self.__control__.MASK_LIST.bind("<<ListboxSelect>>", self.__highlight_mask__) # https://stackoverflow.com/a/6557251/20876404
         self.__control__.MASK_LIST.bind("<Double-Button-1>", self.__focus_on_mask__)
         self.__control__.MASK_LIST.bind("f", self.__focus_on_mask__)
         self.__control__.MASK_LIST.bind("<KeyPress-Delete>", self.__delete_mask__)
         self.bind("<Destroy>", self.save_mask)
 
-    def __read_setting__(self):
-        try:
-            f = open(f"{WORKSPACE_DIR}/setting.json", "rt")
-            content = json.load(f)
-            f.close()
-
-            if "WHEEL_SENSITIVITY" in content.keys():
-                self.__img_edit__.WHEEL_SENSITIVITY = content["WHEEL_SENSITIVITY"]
-            if "MOUSE_SENSITIVITY" in content.keys():
-                self.__img_edit__.MOUSE_SENSITIVITY = content["MOUSE_SENSITIVITY"]
-            if "label" in content.keys():
-                self.__control__.LABEL_COMBO.configure(values=content['label'])
-                self.__control__.LABEL_COMBO.set(content['label'][0])
-
-        except OSError:
-            messagebox.showwarning("setting.json not found", f"無法載入{WORKSPACE_DIR}/setting.json")
+    # Polygon ###########################################################################################################
 
     def __add_polygon_point__(self, event: tk.Event):
         """
@@ -119,6 +105,8 @@ class MainFrame(ttk.Frame):
         self.__polygon__.clear()
         self.__img_edit__.update(None)
 
+    # Mask ###############################################################################################################
+
     def __add_mask__(self):
         """
         將__polygon__轉成遮罩，然後把它加入__mask_db__和MASK_LIST
@@ -142,7 +130,7 @@ class MainFrame(ttk.Frame):
 
         # 如果有要繪製mask的bounding box，則要重新更新畫面
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
-            self.__img_edit__.update(None)
+            self.__highlight_mask__(None)
 
     def __delete_mask__(self, event: tk.Event = None):
         """
@@ -160,6 +148,9 @@ class MainFrame(ttk.Frame):
         label = self.__control__.MASK_LIST.get(idx)
 
         if messagebox.askyesno("Delete", f"確定要刪掉 {label} (index={idx}) 嗎？"):
+            # 清除選擇 + 取消標記
+            self.__control__.MASK_LIST.selection_clear(0, tk.END)
+
             # 從list刪掉
             self.__control__.MASK_LIST.delete(idx)
             # 從db刪掉
@@ -167,7 +158,7 @@ class MainFrame(ttk.Frame):
 
         # 如果有要繪製mask的bounding box，則要重新更新畫面
         if self.__control__.SHOULD_DRAW_MASK_BOX.get() == '1':
-            self.__img_edit__.update(None)
+            self.__highlight_mask__(None)
         
     def __focus_on_mask__(self, event: tk.Event):
         """ 
@@ -191,6 +182,37 @@ class MainFrame(ttk.Frame):
             cv2.destroyWindow("mask")
         cv2.imshow("mask", np.array(mask_data['Mask'], dtype=np.uint8))
 
+    def __highlight_mask__(self, event: tk.Event):
+        """
+        將選中的mask突顯出來
+        """
+        sel = self.__control__.MASK_LIST.curselection()
+        if len(sel) == 1:
+            self.__mask_db__.set_highlight(sel[0])
+        else:
+            print("clear hilight")
+            self.__mask_db__.set_highlight(-1)
+        
+        self.__img_edit__.update(None)
+
+    # Misc ###############################################################################################################
+
+    def __read_setting__(self):
+        try:
+            f = open(f"{WORKSPACE_DIR}/setting.json", "rt")
+            content = json.load(f)
+            f.close()
+
+            if "WHEEL_SENSITIVITY" in content.keys():
+                self.__img_edit__.WHEEL_SENSITIVITY = content["WHEEL_SENSITIVITY"]
+            if "MOUSE_SENSITIVITY" in content.keys():
+                self.__img_edit__.MOUSE_SENSITIVITY = content["MOUSE_SENSITIVITY"]
+            if "label" in content.keys():
+                self.__control__.LABEL_COMBO.configure(values=content['label'])
+                self.__control__.LABEL_COMBO.set(content['label'][0])
+
+        except OSError:
+            messagebox.showwarning("setting.json not found", f"無法載入{WORKSPACE_DIR}/setting.json")
 
     def __render_polygon_and_box__(self, img: cv2.Mat, bbox: tuple[int]):
         """

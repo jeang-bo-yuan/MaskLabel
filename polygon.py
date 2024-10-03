@@ -32,6 +32,8 @@ class Polygon:
         """
         self.__points__.clear()
 
+    # 繪製 #################################################################################################################
+
     def render(self, img: cv2.Mat, bbox: tuple[int], close: bool):
         """
         將所有點畫到img上
@@ -51,6 +53,8 @@ class Polygon:
 
         for i in range(pts.shape[0]):
             cv2.circle(img, pts[i, 0], 3, (255, 0, 0))
+
+    # 轉換成輸出格式 ########################################################################################################
 
     def toMask(self) -> tuple[tuple[int], cv2.Mat] | tuple[None, None]:
         """

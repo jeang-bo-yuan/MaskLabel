@@ -52,7 +52,7 @@ class ControlFrame(ttk.Frame):
         self.DEL_MASK_BTN.grid(row=5, column=2, columnspan=2, sticky=(tk.W, tk.E))
 
         self.SHOULD_DRAW_MASK_BOX = tk.StringVar(value='1')
-        ttk.Checkbutton(self, text="繪製Mask的Bounding Box", variable=self.SHOULD_DRAW_MASK_BOX).grid(row=6, column=0, columnspan=4, sticky=(tk.W, tk.E))
+        ttk.Checkbutton(self, text="突顯Mask的範圍", variable=self.SHOULD_DRAW_MASK_BOX).grid(row=6, column=0, columnspan=4, sticky=(tk.W, tk.E))
 
         # Mask 列表
         scroll = ttk.Scrollbar(self, orient='vertical')

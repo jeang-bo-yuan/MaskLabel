@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from tkinter import messagebox
 import os.path
 import json
@@ -8,12 +9,16 @@ class MaskDatabase:
     用來存放所有已加入的mask
     """
     __database__: list[dict] # 每一個mask都以一個dict表示，其格式為 { "bbox": [x1, y1, x2, y2], "label": "標籤", "Mask": 二維的int陣列 }
+    __hilight_idx__: int     # 將要突顯的 mask 的 index 給快取起來
+    __hilight_cnt__: cv2.Mat | None # 將要突顯的 mask 的 contour 給快取起來
 
     def __init__(self):
         """
         初始化
         """
         self.__database__ = list()
+        self.__hilight_idx__ = -1
+        self.__hilight_cnt__ = None
 
     def append(self, bbox: tuple[int], label: str, mask: list[list[int]]):
         """
@@ -41,6 +46,32 @@ class MaskDatabase:
         """
         return self.__database__[idx]
 
+    # 繪製 ##################################################################################################################
+
+    def set_highlight(self, idx: int):
+        """
+        下次render時，將第idx個mask的區域給著色
+
+        Aegs:
+            idx: 要突顯的 mask 的 index，若超出範圍則不著色
+        """
+        # check if in range
+        if idx in range(len(self.__database__)):
+            # already in the cache
+            if idx == self.__hilight_idx__:
+                return
+            else:
+                x, y = self.__database__[idx]["bbox"][0:2]
+                img = np.array(self.__database__[idx]["Mask"], dtype=np.uint8)
+
+                self.__hilight_idx__ = idx
+                self.__hilight_cnt__ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0][0]
+                self.__hilight_cnt__[:, :, 0] += x
+                self.__hilight_cnt__[:, :, 1] += y
+        else:
+            self.__hilight_idx__ = -1
+            self.__hilight_cnt__ = None
+
     def render(self, img: cv2.Mat, bbox: tuple[int]):
         """
         將database中所有mask的bounding box畫出來
@@ -56,9 +87,24 @@ class MaskDatabase:
             # 取出mask的bounding box
             x1, y1, x2, y2 = mask_data['bbox']
 
-            # 繪製是要將座標轉成相對於可視範圍的左上角
+            # 繪製時要將座標轉成相對於可視範圍的左上角
             # 因為mask是位在 x 屬於 [x1, x2) 且 y 屬於 [y1, y2) 的區域，所以右下角的座標要減一
             cv2.rectangle(img, (x1 - x, y1 - y), (x2 - x - 1, y2 - y - 1), (191, 93, 2))
+
+        if self.__hilight_cnt__ is not None:
+            # 將圖片複製一份
+            img_cpy = img.copy()
+
+            # 繪製contour包住的區塊
+            cnt = self.__hilight_cnt__.copy()
+            cnt[:, :, 0] -= x    # 移動，使之相對於圖片左上角
+            cnt[:, :, 1] -= y
+            cv2.fillPoly(img_cpy, [cnt], (255, 0, 0))
+
+            # 將兩張圖疊加
+            cv2.addWeighted(img, 0.5, img_cpy, 0.5, 0, dst=img)
+
+    # 存讀檔 ####################################################################################################
 
     def load_json(self, img_path: str):
         """
