@@ -21,6 +21,7 @@ class MainFrame(ttk.Frame):
     主要功能： 當作__img_edit__和__control__間溝通的橋梁，如果有功能會同時用到這兩個widget，則會在MainFrame實作
     """
     IMG_REL_PATH: str             # 圖片的相對路徑（相對於工作目錄）
+    DEBUG_MODE: bool              # 是否為除錯模式
     __img_edit__: ImageEditWindow # 圖片顯示視窗
     __control__: ControlFrame     # 控制面版
     __polygon__: Polygon          # 多邊形
@@ -116,9 +117,10 @@ class MainFrame(ttk.Frame):
             messagebox.showerror("Error", "至少需要3個點")
             return
         
-        if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
-            cv2.destroyWindow("mask")
-        cv2.imshow("mask", img)
+        if self.DEBUG_MODE:
+            if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
+                cv2.destroyWindow("mask")
+            cv2.imshow("mask", img)
 
         label = self.__control__.LABEL_COMBO.get()
         # 在MASK_LIST中新增一個欄位，它的名字為「label」
@@ -178,9 +180,10 @@ class MainFrame(ttk.Frame):
         self.__img_edit__.change_viewport((x1, y1, x2 - x1, y2 - y1))
 
         # 顯示mask
-        if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
-            cv2.destroyWindow("mask")
-        cv2.imshow("mask", np.array(mask_data['Mask'], dtype=np.uint8))
+        if self.DEBUG_MODE:
+            if cv2.getWindowProperty("mask", cv2.WND_PROP_VISIBLE):
+                cv2.destroyWindow("mask")
+            cv2.imshow("mask", np.array(mask_data['Mask'], dtype=np.uint8))
 
     def __highlight_mask__(self, event: tk.Event):
         """
@@ -210,6 +213,8 @@ class MainFrame(ttk.Frame):
             if "label" in content.keys():
                 self.__control__.LABEL_COMBO.configure(values=content['label'])
                 self.__control__.LABEL_COMBO.set(content['label'][0])
+            if "debug_mode" in content.keys():
+                self.DEBUG_MODE = content["debug_mode"]
 
         except OSError:
             messagebox.showwarning("setting.json not found", f"無法載入{WORKSPACE_DIR}/setting.json")

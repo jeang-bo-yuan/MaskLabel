@@ -105,7 +105,8 @@ Step 7. 存檔
 {
     "WHEEL_SENSITIVITY": "(float) Zoom In / Zoom Out的靈敏度",
     "MOUSE_SENSITIVITY": "(float) 拖動畫面的靈敏度",
-    "label": "(list of string) 所有可選的標籤"
+    "label": "(list of string) 所有可選的標籤",
+    "debug_mode": "(bool) 除錯模式下會顯示更多訊息"
 }
 ```
 
