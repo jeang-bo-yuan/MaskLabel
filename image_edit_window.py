@@ -51,6 +51,7 @@ class ImageEditWindow(ttk.Label):
         try:
             self.ORIGINAL_IMG = cv2.imdecode(np.fromfile(file_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             assert self.ORIGINAL_IMG is not None
+            self.ORIGINAL_IMG = cv2.cvtColor(self.ORIGINAL_IMG, cv2.COLOR_BGR2RGB)
         except:
             messagebox.showerror("Error", f"無法開啟圖片 \"{file_path}\"")
             sys.exit(-1)
