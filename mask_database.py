@@ -8,9 +8,13 @@ class MaskDatabase:
     """
     用來存放所有已加入的mask
     """
-    __database__: list[dict] # 每一個mask都以一個dict表示，其格式為 { "bbox": [x1, y1, x2, y2], "label": "標籤", "Mask": 二維的int陣列 }
-    __hilight_idx__: int     # 將要突顯的 mask 的 index 給快取起來
-    __hilight_cnt__: cv2.Mat | None # 將要突顯的 mask 的 contour 給快取起來
+    
+    __database__: list[dict] 
+    """ 每一個mask都以一個dict表示，其格式為 { "bbox": [x1, y1, x2, y2], "label": "標籤", "Mask": 二維的int陣列 } """
+    __hilight_idx__: int     
+    """ 將要突顯的 mask 的 index 給快取起來 """ 
+    __hilight_img__: cv2.Mat | None 
+    """ 將要突顯的 mask 的 "Mask" 欄位給轉成圖片 """
 
     def __init__(self):
         """
@@ -18,7 +22,7 @@ class MaskDatabase:
         """
         self.__database__ = list()
         self.__hilight_idx__ = -1
-        self.__hilight_cnt__ = None
+        self.__hilight_img__ = None
 
     def append(self, bbox: tuple[int], label: str, mask: list[list[int]]):
         """
@@ -61,16 +65,11 @@ class MaskDatabase:
             if idx == self.__hilight_idx__:
                 return
             else:
-                x, y = self.__database__[idx]["bbox"][0:2]
-                img = np.array(self.__database__[idx]["Mask"], dtype=np.uint8)
-
                 self.__hilight_idx__ = idx
-                self.__hilight_cnt__ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)[0][0]
-                self.__hilight_cnt__[:, :, 0] += x
-                self.__hilight_cnt__[:, :, 1] += y
+                self.__hilight_img__ = np.array(self.__database__[idx]["Mask"], dtype=np.uint8)
         else:
             self.__hilight_idx__ = -1
-            self.__hilight_cnt__ = None
+            self.__hilight_img__ = None
 
     def render(self, img: cv2.Mat, bbox: tuple[int]):
         """
@@ -92,18 +91,22 @@ class MaskDatabase:
             # 因為mask是位在 x 屬於 [x1, x2) 且 y 屬於 [y1, y2) 的區域，所以右下角的座標要減一
             cv2.rectangle(img, (x1 - x, y1 - y), (x2 - x - 1, y2 - y - 1), (191, 93, 2), thickness=thick, lineType=cv2.LINE_AA)
 
-        if self.__hilight_cnt__ is not None:
-            # 將圖片複製一份
+        if self.__hilight_img__ is not None:
+            x1, y1, x2, y2 = self.__database__[self.__hilight_idx__]['bbox']
+
+            # 將 mask 圖片偏移，使得它的位置相對於 viewport 的左上角
+            affine_mask = cv2.warpAffine(self.__hilight_img__, np.array([[1, 0, x1 - x], [0, 1, y1 - y]], np.float32), (w, h))
+
+            # 將 mask 的區域，弄成紅色
             img_cpy = img.copy()
+            color = np.zeros(img.shape, np.uint8)
+            color[:, :, 0] = 255
+            # 透過 mask 來指定只對特定區域做 bitwise_and，而輸出結果直接寫回 img_cpy
+            # 因為有指定 mask，所以只有該區域會被寫回 img_cpy
+            cv2.bitwise_and(color, color, mask=affine_mask, dst=img_cpy)
 
-            # 繪製contour包住的區塊
-            cnt = self.__hilight_cnt__.copy()
-            cnt[:, :, 0] -= x    # 移動，使之相對於圖片左上角
-            cnt[:, :, 1] -= y
-            cv2.fillPoly(img_cpy, [cnt], (255, 0, 0))
-
-            # 將兩張圖疊加
-            cv2.addWeighted(img, 0.5, img_cpy, 0.5, 0, dst=img)
+            # 將「原圖」和「mask區域被改成紅色的圖」相疊
+            cv2.addWeighted(img, 0.5, img_cpy, 0.5, 0, dst=img)            
 
     # 存讀檔 ####################################################################################################
 
